@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Control Inteligente – Banda Transportadora</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="bg-gray-950 text-white font-inter overflow-x-hidden">
+
+  <!-- ============================================================
+       SIDEBAR
+  ============================================================ -->
+  <aside id="sidebar" class="sidebar fixed left-0 top-0 h-full w-64 z-50 flex flex-col">
+    <!-- Logo -->
+    <div class="sidebar-logo flex items-center gap-3 px-6 py-5 border-b border-white/5">
+      <div class="logo-icon">
+        <i class="fas fa-conveyor-belt-alt text-blue-400 text-xl"></i>
+        <i class="fas fa-cogs text-blue-400 text-xl" style="display:none"></i>
+        <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+          <rect x="2" y="10" width="24" height="5" rx="2.5" fill="#3B82F6" opacity="0.9"/>
+          <circle cx="5" cy="12.5" r="4" fill="#1E40AF" stroke="#3B82F6" stroke-width="1.5"/>
+          <circle cx="23" cy="12.5" r="4" fill="#1E40AF" stroke="#3B82F6" stroke-width="1.5"/>
+          <rect x="10" y="6" width="8" height="7" rx="1" fill="#60A5FA" opacity="0.7"/>
+          <path d="M11 13 L14 18 L17 13" fill="#3B82F6" opacity="0.6"/>
+        </svg>
+      </div>
+      <div>
+        <p class="font-orbitron text-xs font-bold text-blue-400 tracking-widest uppercase">BeltControl</p>
+        <p class="text-gray-500 text-xs">v2.4.1 Industrial</p>
+      </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="flex-1 px-3 py-4 overflow-y-auto space-y-1">
+      <p class="text-gray-600 text-xs font-semibold tracking-widest uppercase px-3 mb-2">Sistema</p>
+
+      <a href="#" class="nav-item active" data-section="dashboard" onclick="showSection('dashboard', this)">
+        <i class="fas fa-th-large w-5 text-center"></i>
+        <span>Dashboard General</span>
+        <span class="nav-badge ml-auto">3</span>
+      </a>
+      <a href="#" class="nav-item" data-section="sensores" onclick="showSection('sensores', this)">
+        <i class="fas fa-microchip w-5 text-center"></i>
+        <span>Sensores</span>
+        <span class="nav-dot ml-auto bg-green-400"></span>
+      </a>
+      <a href="#" class="nav-item" data-section="actuadores" onclick="showSection('actuadores', this)">
+        <i class="fas fa-cog w-5 text-center"></i>
+        <span>Actuadores</span>
+      </a>
+
+      <p class="text-gray-600 text-xs font-semibold tracking-widest uppercase px-3 mt-4 mb-2">Análisis</p>
+
+      <a href="#" class="nav-item" data-section="produccion" onclick="showSection('produccion', this)">
+        <i class="fas fa-chart-bar w-5 text-center"></i>
+        <span>Producción</span>
+      </a>
+      <a href="#" class="nav-item" data-section="energia" onclick="showSection('energia', this)">
+        <i class="fas fa-bolt w-5 text-center"></i>
+        <span>Consumo Eléctrico</span>
+      </a>
+      <a href="#" class="nav-item" data-section="proceso" onclick="showSection('proceso', this)">
+        <i class="fas fa-project-diagram w-5 text-center"></i>
+        <span>Flujo de Proceso</span>
+      </a>
+      <a href="#" class="nav-item" data-section="maquina" onclick="showSection('maquina', this)">
+        <i class="fas fa-drafting-compass w-5 text-center"></i>
+        <span>Diagrama Máquina</span>
+      </a>
+
+      <p class="text-gray-600 text-xs font-semibold tracking-widest uppercase px-3 mt-4 mb-2">Sistema</p>
+
+      <a href="#" class="nav-item relative" data-section="alertas" onclick="showSection('alertas', this)">
+        <i class="fas fa-bell w-5 text-center"></i>
+        <span>Alertas</span>
+        <span class="nav-badge ml-auto bg-red-500">5</span>
+      </a>
+      <a href="#" class="nav-item" data-section="config" onclick="showSection('config', this)">
+        <i class="fas fa-sliders-h w-5 text-center"></i>
+        <span>Configuración</span>
+      </a>
+    </nav>
+
+    <!-- Sidebar Footer -->
+    <div class="px-4 py-4 border-t border-white/5">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold">AD</div>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-medium text-white truncate">Administrador</p>
+          <p class="text-xs text-gray-500">Sistema activo</p>
+        </div>
+        <div class="status-dot bg-green-400"></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============================================================
+       MAIN CONTENT WRAPPER
+  ============================================================ -->
+  <div class="ml-64 flex flex-col min-h-screen">
+
+    <!-- ============================================================
+         NAVBAR
+    ============================================================ -->
+    <header class="navbar sticky top-0 z-40 px-6 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <button onclick="toggleSidebar()" class="btn-icon md:hidden">
+          <i class="fas fa-bars"></i>
+        </button>
+        <div>
+          <h1 class="font-orbitron text-sm font-bold text-white tracking-wide">Control Inteligente – Banda Transportadora</h1>
+          <p class="text-gray-500 text-xs">Sistema de Dosificación Automatizado con Tolva</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-4">
+        <!-- System Status Badge -->
+        <div id="systemStatusBadge" class="status-badge status-off">
+          <span class="status-led"></span>
+          <span id="statusText" class="font-orbitron text-xs font-bold tracking-widest">APAGADA</span>
+        </div>
+
+        <!-- Date/Time -->
+        <div class="hidden md:flex flex-col items-end">
+          <span id="clock" class="font-mono text-sm text-blue-300 font-medium"></span>
+          <span id="dateDisplay" class="font-mono text-xs text-gray-500"></span>
+        </div>
+
+        <!-- Alerts Icon -->
+        <button class="btn-icon relative" onclick="showSection('alertas', null)">
+          <i class="fas fa-bell text-yellow-400"></i>
+          <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-bold">5</span>
+        </button>
+
+        <!-- Config -->
+        <button class="btn-icon" onclick="showSection('config', null)">
+          <i class="fas fa-cog"></i>
+        </button>
+
+        <!-- User -->
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-xs font-bold">AD</div>
+        </div>
+      </div>
+    </header>
+
+    <!-- ============================================================
+         SECTIONS CONTAINER
+    ============================================================ -->
+    <main class="flex-1 p-6">
+
+      <!-- ===== SECTION: DASHBOARD ===== -->
+      <section id="section-dashboard" class="section-content active">
+
+        <!-- KPI Cards Row -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div class="kpi-card">
+            <div class="kpi-icon bg-blue-500/20 text-blue-400"><i class="fas fa-box"></i></div>
+            <div>
+              <p class="kpi-label">Recipientes Procesados</p>
+              <p class="kpi-value" id="kpiTotal">0</p>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon bg-green-500/20 text-green-400"><i class="fas fa-weight-hanging"></i></div>
+            <div>
+              <p class="kpi-label">Peso Promedio</p>
+              <p class="kpi-value" id="kpiPeso">0.00 kg</p>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon bg-yellow-500/20 text-yellow-400"><i class="fas fa-bolt"></i></div>
+            <div>
+              <p class="kpi-label">Consumo Actual</p>
+              <p class="kpi-value" id="kpiConsumo">0.0 W</p>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon bg-red-500/20 text-red-400"><i class="fas fa-exclamation-triangle"></i></div>
+            <div>
+              <p class="kpi-label">Alertas Activas</p>
+              <p class="kpi-value text-red-400">5</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Main Controls + Quick Sensors -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+
+          <!-- Control Panel -->
+          <div class="glass-card p-6 flex flex-col gap-5">
+            <div class="flex items-center justify-between">
+              <h2 class="section-title"><i class="fas fa-gamepad text-blue-400 mr-2"></i>Control Principal</h2>
+              <div class="uptime-badge">
+                <i class="fas fa-clock text-blue-400 text-xs"></i>
+                <span id="uptime" class="font-mono text-xs text-blue-300">00:00:00</span>
+              </div>
+            </div>
+
+            <!-- Big Control Buttons -->
+            <button id="btnEncender" onclick="setMachineState('OPERANDO')"
+              class="btn-main btn-on w-full">
+              <i class="fas fa-power-off text-2xl"></i>
+              <span class="font-orbitron font-bold text-lg tracking-wider">ENCENDER</span>
+              <span class="text-xs opacity-70">Iniciar sistema completo</span>
+            </button>
+
+            <button id="btnApagar" onclick="setMachineState('APAGADA')"
+              class="btn-main btn-off w-full">
+              <i class="fas fa-stop-circle text-2xl"></i>
+              <span class="font-orbitron font-bold text-lg tracking-wider">APAGAR</span>
+              <span class="text-xs opacity-70">Detener sistema</span>
+            </button>
+
+            <button id="btnPausa" onclick="setMachineState('PAUSADA')"
+              class="btn-main btn-pause w-full">
+              <i class="fas fa-exclamation-triangle text-2xl"></i>
+              <span class="font-orbitron font-bold text-lg tracking-wider">PAUSA EMERGENCIA</span>
+              <span class="text-xs opacity-70">Detención inmediata</span>
+            </button>
+
+            <!-- Band Status Indicator -->
+            <div class="band-indicator mt-2">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs text-gray-400 font-semibold uppercase tracking-wider">Estado Banda</span>
+                <span id="bandStatusLabel" class="text-xs font-bold text-gray-500">DETENIDA</span>
+              </div>
+              <div class="band-visual" id="bandVisual">
+                <div class="band-track">
+                  <div class="band-belt" id="bandBelt"></div>
+                  <div class="band-roller left"></div>
+                  <div class="band-roller right"></div>
+                  <div class="band-objects" id="bandObjects"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Live Sensor Snapshot -->
+          <div class="glass-card p-6 lg:col-span-2">
+            <h2 class="section-title mb-4"><i class="fas fa-satellite-dish text-green-400 mr-2"></i>Sensores Críticos – Vista Rápida</h2>
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3" id="quickSensors">
+              <!-- filled by JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div class="glass-card p-6">
+            <h2 class="section-title mb-4"><i class="fas fa-chart-line text-blue-400 mr-2"></i>Producción por Hora</h2>
+            <canvas id="chartProduccion" height="180"></canvas>
+          </div>
+          <div class="glass-card p-6">
+            <h2 class="section-title mb-4"><i class="fas fa-bolt text-yellow-400 mr-2"></i>Consumo Eléctrico</h2>
+            <canvas id="chartEnergia" height="180"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== SECTION: SENSORES ===== -->
+      <section id="section-sensores" class="section-content">
+        <div class="flex items-center justify-between mb-6">
+          <div>
+            <h2 class="text-2xl font-orbitron font-bold text-white">Panel de Sensores</h2>
+            <p class="text-gray-500 text-sm mt-1">12 sensores activos · Actualización en tiempo real</p>
+          </div>
+          <div class="flex gap-2">
+            <span class="px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-xs font-bold border border-green-500/30">
+              <i class="fas fa-circle text-xs mr-1 animate-pulse"></i>LIVE
+            </span>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" id="sensorsGrid">
+          <!-- filled by JS -->
+        </div>
+      </section>
+
+      <!-- ===== SECTION: ACTUADORES ===== -->
+      <section id="section-actuadores" class="section-content">
+        <div class="mb-6">
+          <h2 class="text-2xl font-orbitron font-bold text-white">Panel de Actuadores</h2>
+          <p class="text-gray-500 text-sm mt-1">Control manual de motores y mecanismos</p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="actuadoresGrid">
+          <!-- filled by JS -->
+        </div>
+      </section>
+
+      <!-- ===== SECTION: PRODUCCION ===== -->
+      <section id="section-produccion" class="section-content">
+        <div class="mb-6">
+          <h2 class="text-2xl font-orbitron font-bold text-white">Análisis de Producción</h2>
+          <p class="text-gray-500 text-sm mt-1">Métricas y estadísticas del proceso</p>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <div class="glass-card p-6">
+            <h3 class="section-title mb-4"><i class="fas fa-boxes text-blue-400 mr-2"></i>Producción por Hora</h3>
+            <canvas id="chartProduccion2" height="200"></canvas>
+          </div>
+          <div class="glass-card p-6">
+            <h3 class="section-title mb-4"><i class="fas fa-balance-scale text-green-400 mr-2"></i>Peso Promedio por Recipiente</h3>
+            <canvas id="chartPeso" height="200"></canvas>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div class="glass-card p-6">
+            <h3 class="section-title mb-4"><i class="fas fa-bug text-red-400 mr-2"></i>Errores y Atascos Detectados</h3>
+            <canvas id="chartErrores" height="200"></canvas>
+          </div>
+          <div class="glass-card p-6">
+            <h3 class="section-title mb-4"><i class="fas fa-tachometer-alt text-yellow-400 mr-2"></i>Estadísticas de Turno</h3>
+            <div class="space-y-4 mt-4" id="statsTurno">
+              <!-- filled by JS -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== SECTION: ENERGIA ===== -->
+      <section id="section-energia" class="section-content">
+        <div class="mb-6">
+          <h2 class="text-2xl font-orbitron font-bold text-white">Consumo Eléctrico</h2>
+          <p class="text-gray-500 text-sm mt-1">Monitoreo de voltaje, corriente y potencia</p>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div class="glass-card p-4 text-center">
+            <p class="text-gray-500 text-xs mb-1 uppercase tracking-wider">Voltaje</p>
+            <p class="text-3xl font-orbitron font-bold text-yellow-400" id="voltajeDisplay">220 V</p>
+            <div class="gauge-mini mt-2"><div class="gauge-fill bg-yellow-400" id="voltajeGauge" style="width:88%"></div></div>
+          </div>
+          <div class="glass-card p-4 text-center">
+            <p class="text-gray-500 text-xs mb-1 uppercase tracking-wider">Corriente</p>
+            <p class="text-3xl font-orbitron font-bold text-blue-400" id="corrienteDisplay">4.2 A</p>
+            <div class="gauge-mini mt-2"><div class="gauge-fill bg-blue-400" id="corrienteGauge" style="width:42%"></div></div>
+          </div>
+          <div class="glass-card p-4 text-center">
+            <p class="text-gray-500 text-xs mb-1 uppercase tracking-wider">Potencia</p>
+            <p class="text-3xl font-orbitron font-bold text-green-400" id="potenciaDisplay">924 W</p>
+            <div class="gauge-mini mt-2"><div class="gauge-fill bg-green-400" id="potenciaGauge" style="width:46%"></div></div>
+          </div>
+          <div class="glass-card p-4 text-center">
+            <p class="text-gray-500 text-xs mb-1 uppercase tracking-wider">Factor Potencia</p>
+            <p class="text-3xl font-orbitron font-bold text-purple-400">0.97</p>
+            <div class="gauge-mini mt-2"><div class="gauge-fill bg-purple-400" style="width:97%"></div></div>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div class="glass-card p-6">
+            <h3 class="section-title mb-4"><i class="fas fa-wave-square text-yellow-400 mr-2"></i>Voltaje en Tiempo Real</h3>
+            <canvas id="chartVoltaje" height="200"></canvas>
+          </div>
+          <div class="glass-card p-6">
+            <h3 class="section-title mb-4"><i class="fas fa-water text-blue-400 mr-2"></i>Corriente en Tiempo Real</h3>
+            <canvas id="chartCorriente" height="200"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== SECTION: PROCESO ===== -->
+      <section id="section-proceso" class="section-content">
+        <div class="mb-6">
+          <h2 class="text-2xl font-orbitron font-bold text-white">Flujo de Proceso</h2>
+          <p class="text-gray-500 text-sm mt-1">Visualización paso a paso del ciclo de dosificación</p>
+        </div>
+        <div class="glass-card p-8">
+          <div class="process-flow" id="processFlow">
+            <!-- filled by JS -->
+          </div>
+          <div class="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6" id="processDetails">
+            <!-- filled by JS -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== SECTION: MÁQUINA (DIAGRAM) ===== -->
+      <section id="section-maquina" class="section-content">
+        <div class="mb-6">
+          <h2 class="text-2xl font-orbitron font-bold text-white">Diagrama de Máquina</h2>
+          <p class="text-gray-500 text-sm mt-1">Representación esquemática interactiva del sistema</p>
+        </div>
+        <div class="glass-card p-6">
+          <div id="machineDiagram" class="machine-diagram-container">
+            <!-- SVG Diagram -->
+            <svg id="machineSVG" viewBox="0 0 900 380" xmlns="http://www.w3.org/2000/svg" class="w-full">
+              <!-- Background Grid -->
+              <defs>
+                <pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse">
+                  <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+                </pattern>
+                <filter id="glow">
+                  <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                  <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                </filter>
+                <filter id="glow2">
+                  <feGaussianBlur stdDeviation="5" result="coloredBlur"/>
+                  <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                </filter>
+                <linearGradient id="beltGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#1e3a5f"/>
+                  <stop offset="50%" stop-color="#2563eb" stop-opacity="0.5"/>
+                  <stop offset="100%" stop-color="#1e3a5f"/>
+                </linearGradient>
+                <linearGradient id="tolvaGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stop-color="#1d4ed8"/>
+                  <stop offset="100%" stop-color="#1e40af"/>
+                </linearGradient>
+                <linearGradient id="motorGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#374151"/>
+                  <stop offset="100%" stop-color="#111827"/>
+                </linearGradient>
+              </defs>
+
+              <rect width="900" height="380" fill="url(#grid)"/>
+
+              <!-- === CONVEYOR BELT === -->
+              <!-- Belt Surface -->
+              <rect x="80" y="200" width="680" height="22" rx="4" fill="url(#beltGrad)" stroke="#3B82F6" stroke-width="1.5"/>
+              <!-- Belt dashes animation -->
+              <rect x="80" y="205" width="680" height="4" rx="2" fill="none" stroke="#3B82F6" stroke-width="1" stroke-dasharray="20,15" opacity="0.6">
+                <animate attributeName="stroke-dashoffset" from="0" to="-35" dur="1s" repeatCount="indefinite"/>
+              </rect>
+              <!-- Belt underside -->
+              <rect x="80" y="222" width="680" height="10" rx="2" fill="#0f172a" stroke="#1d4ed8" stroke-width="1" opacity="0.7"/>
+
+              <!-- Roller Left -->
+              <ellipse cx="95" cy="211" rx="18" ry="11" fill="url(#motorGrad)" stroke="#3B82F6" stroke-width="2" filter="url(#glow)"/>
+              <circle cx="95" cy="211" r="6" fill="#1d4ed8" stroke="#60A5FA" stroke-width="1.5"/>
+              <text x="95" y="238" text-anchor="middle" fill="#94a3b8" font-size="9" font-family="JetBrains Mono">R1</text>
+
+              <!-- Roller Right -->
+              <ellipse cx="745" cy="211" rx="18" ry="11" fill="url(#motorGrad)" stroke="#3B82F6" stroke-width="2" filter="url(#glow)"/>
+              <circle cx="745" cy="211" r="6" fill="#1d4ed8" stroke="#60A5FA" stroke-width="1.5"/>
+              <text x="745" y="238" text-anchor="middle" fill="#94a3b8" font-size="9" font-family="JetBrains Mono">R2</text>
+
+              <!-- Belt support legs -->
+              <rect x="200" y="222" width="4" height="60" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+              <rect x="400" y="222" width="4" height="60" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+              <rect x="600" y="222" width="4" height="60" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+              <rect x="150" y="280" width="500" height="4" rx="2" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+
+              <!-- === TOLVA (HOPPER) === -->
+              <!-- Hopper Body -->
+              <polygon points="340,30 520,30 490,130 370,130" fill="url(#tolvaGrad)" stroke="#3B82F6" stroke-width="2" filter="url(#glow)"/>
+              <!-- Hopper top opening -->
+              <rect x="338" y="22" width="184" height="12" rx="3" fill="#1d4ed8" stroke="#60A5FA" stroke-width="1.5"/>
+              <!-- Material in hopper -->
+              <polygon points="345,35 515,35 495,80 365,80" fill="#2563eb" opacity="0.4"/>
+              <text x="430" y="90" text-anchor="middle" fill="#93c5fd" font-size="11" font-family="JetBrains Mono" font-weight="bold">TOLVA</text>
+              <text x="430" y="105" text-anchor="middle" fill="#64748b" font-size="9" font-family="JetBrains Mono">72% llena</text>
+              <!-- Hopper outlet gate -->
+              <rect x="398" y="128" width="64" height="8" rx="2" fill="#374151" stroke="#60A5FA" stroke-width="1.5"/>
+              <text x="430" y="154" text-anchor="middle" fill="#94a3b8" font-size="8" font-family="JetBrains Mono">COMPUERTA M3</text>
+              <!-- Material flow line -->
+              <line x1="430" y1="136" x2="430" y2="200" stroke="#3B82F6" stroke-width="2" stroke-dasharray="5,4" opacity="0.6">
+                <animate attributeName="stroke-dashoffset" from="0" to="-18" dur="0.8s" repeatCount="indefinite"/>
+              </line>
+
+              <!-- === FILLING STATION === -->
+              <rect x="390" y="155" width="80" height="45" rx="4" fill="#0f172a" stroke="#22c55e" stroke-width="1.5" filter="url(#glow)"/>
+              <text x="430" y="174" text-anchor="middle" fill="#22c55e" font-size="9" font-family="JetBrains Mono">ESTACIÓN</text>
+              <text x="430" y="187" text-anchor="middle" fill="#22c55e" font-size="9" font-family="JetBrains Mono">LLENADO</text>
+              <!-- Container being filled -->
+              <rect x="413" y="190" width="34" height="20" rx="2" fill="#1e293b" stroke="#22c55e" stroke-width="1.5"/>
+              <rect x="415" y="200" width="20" height="8" rx="1" fill="#22c55e" opacity="0.6"/>
+
+              <!-- === SENSOR ANNOTATIONS === -->
+              <!-- IR Sensor Entry -->
+              <g class="sensor-node" id="svgSensor1" onclick="highlightSensor(1)">
+                <circle cx="120" cy="190" r="10" fill="#0f172a" stroke="#22c55e" stroke-width="2" filter="url(#glow)"/>
+                <text x="120" y="194" text-anchor="middle" fill="#22c55e" font-size="8" font-weight="bold">IR</text>
+                <line x1="120" y1="180" x2="120" y2="160" stroke="#22c55e" stroke-width="1" stroke-dasharray="3,2"/>
+                <rect x="70" y="142" width="100" height="18" rx="4" fill="#022c22" stroke="#22c55e" stroke-width="1"/>
+                <text x="120" y="155" text-anchor="middle" fill="#4ade80" font-size="8" font-family="JetBrains Mono">S1 · IR ENTRADA</text>
+              </g>
+
+              <!-- Ultrasonic sensor -->
+              <g class="sensor-node" id="svgSensor2" onclick="highlightSensor(2)">
+                <circle cx="200" cy="185" r="10" fill="#0f172a" stroke="#3b82f6" stroke-width="2"/>
+                <text x="200" y="189" text-anchor="middle" fill="#3b82f6" font-size="7" font-weight="bold">US</text>
+                <line x1="200" y1="175" x2="200" y2="155" stroke="#3b82f6" stroke-width="1" stroke-dasharray="3,2"/>
+                <rect x="150" y="137" width="100" height="18" rx="4" fill="#0c1929" stroke="#3b82f6" stroke-width="1"/>
+                <text x="200" y="150" text-anchor="middle" fill="#93c5fd" font-size="8" font-family="JetBrains Mono">S2 · ULTRASONIDO</text>
+              </g>
+
+              <!-- Weight scale entry -->
+              <g class="sensor-node" id="svgSensor3" onclick="highlightSensor(3)">
+                <rect x="155" y="220" width="50" height="12" rx="2" fill="#0f172a" stroke="#a855f7" stroke-width="1.5"/>
+                <text x="180" y="230" text-anchor="middle" fill="#a855f7" font-size="7" font-family="JetBrains Mono">PESO I</text>
+                <line x1="180" y1="232" x2="180" y2="252" stroke="#a855f7" stroke-width="1" stroke-dasharray="3,2"/>
+                <text x="180" y="263" text-anchor="middle" fill="#a855f7" font-size="8" font-family="JetBrains Mono">S3</text>
+              </g>
+
+              <!-- Encoder -->
+              <g class="sensor-node" id="svgSensor6">
+                <circle cx="95" cy="250" r="8" fill="#0f172a" stroke="#f59e0b" stroke-width="2"/>
+                <text x="95" y="254" text-anchor="middle" fill="#f59e0b" font-size="7" font-weight="bold">ENC</text>
+                <text x="95" y="270" text-anchor="middle" fill="#f59e0b" font-size="8" font-family="JetBrains Mono">S6</text>
+              </g>
+
+              <!-- Nivel Tolva sensor -->
+              <g class="sensor-node" id="svgSensor8">
+                <circle cx="520" cy="60" r="10" fill="#0f172a" stroke="#f59e0b" stroke-width="2"/>
+                <text x="520" y="64" text-anchor="middle" fill="#f59e0b" font-size="7" font-weight="bold">NV</text>
+                <line x1="510" y1="60" x2="490" y2="60" stroke="#f59e0b" stroke-width="1" stroke-dasharray="3,2"/>
+                <rect x="528" y="50" width="90" height="18" rx="4" fill="#1c1208" stroke="#f59e0b" stroke-width="1"/>
+                <text x="573" y="63" text-anchor="middle" fill="#fbbf24" font-size="8" font-family="JetBrains Mono">S8 · NIVEL TOLVA</text>
+              </g>
+
+              <!-- Weight scale exit -->
+              <g class="sensor-node" id="svgSensor7">
+                <rect x="620" y="220" width="50" height="12" rx="2" fill="#0f172a" stroke="#a855f7" stroke-width="1.5"/>
+                <text x="645" y="230" text-anchor="middle" fill="#a855f7" font-size="7" font-family="JetBrains Mono">PESO F</text>
+                <text x="645" y="248" text-anchor="middle" fill="#a855f7" font-size="8" font-family="JetBrains Mono">S7</text>
+              </g>
+
+              <!-- Final de carrera -->
+              <g class="sensor-node" id="svgSensor9">
+                <rect x="720" y="185" width="12" height="30" rx="2" fill="#0f172a" stroke="#ef4444" stroke-width="2"/>
+                <text x="726" y="228" text-anchor="middle" fill="#ef4444" font-size="8" font-family="JetBrains Mono">S9</text>
+                <text x="726" y="240" text-anchor="middle" fill="#ef4444" font-size="7" font-family="JetBrains Mono">FC</text>
+              </g>
+
+              <!-- === MOTOR M1 === -->
+              <g id="motorM1">
+                <rect x="38" y="195" width="44" height="32" rx="6" fill="url(#motorGrad)" stroke="#3B82F6" stroke-width="2" filter="url(#glow)"/>
+                <text x="60" y="208" text-anchor="middle" fill="#60A5FA" font-size="9" font-weight="bold" font-family="JetBrains Mono">M1</text>
+                <text x="60" y="220" text-anchor="middle" fill="#94a3b8" font-size="7" font-family="JetBrains Mono">BANDA</text>
+                <circle cx="60" cy="211" r="3" fill="#22c55e">
+                  <animate attributeName="opacity" values="1;0.3;1" dur="1.2s" repeatCount="indefinite"/>
+                </circle>
+              </g>
+
+              <!-- === MOTOR M2 (Pusher) === -->
+              <g id="motorM2">
+                <rect x="290" y="155" width="44" height="32" rx="6" fill="url(#motorGrad)" stroke="#f59e0b" stroke-width="2"/>
+                <text x="312" y="168" text-anchor="middle" fill="#fbbf24" font-size="9" font-weight="bold" font-family="JetBrains Mono">M2</text>
+                <text x="312" y="180" text-anchor="middle" fill="#94a3b8" font-size="7" font-family="JetBrains Mono">EMPU.</text>
+                <!-- Pusher arm -->
+                <line x1="334" y1="171" x2="380" y2="200" stroke="#f59e0b" stroke-width="2" stroke-dasharray="5,4" opacity="0.7">
+                  <animate attributeName="stroke-dashoffset" from="0" to="-18" dur="0.6s" repeatCount="indefinite"/>
+                </line>
+              </g>
+
+              <!-- === Labels === -->
+              <text x="430" y="365" text-anchor="middle" fill="#334155" font-size="11" font-family="JetBrains Mono">BeltControl v2.4.1 · Diagrama Esquemático · Sistema de Dosificación</text>
+
+              <!-- Object on belt animation -->
+              <rect id="movingObj1" x="150" y="198" width="28" height="14" rx="3" fill="#1d4ed8" stroke="#60A5FA" stroke-width="1.5" opacity="0">
+                <animate attributeName="x" values="150;680" dur="6s" repeatCount="indefinite" begin="0s"/>
+                <animate attributeName="opacity" values="0;1;1;1;0" dur="6s" repeatCount="indefinite" begin="0s"/>
+              </rect>
+              <rect id="movingObj2" x="150" y="198" width="28" height="14" rx="3" fill="#1d4ed8" stroke="#60A5FA" stroke-width="1.5" opacity="0">
+                <animate attributeName="x" values="150;680" dur="6s" repeatCount="indefinite" begin="2s"/>
+                <animate attributeName="opacity" values="0;1;1;1;0" dur="6s" repeatCount="indefinite" begin="2s"/>
+              </rect>
+              <rect id="movingObj3" x="150" y="198" width="28" height="14" rx="3" fill="#1d4ed8" stroke="#60A5FA" stroke-width="1.5" opacity="0">
+                <animate attributeName="x" values="150;680" dur="6s" repeatCount="indefinite" begin="4s"/>
+                <animate attributeName="opacity" values="0;1;1;1;0" dur="6s" repeatCount="indefinite" begin="4s"/>
+              </rect>
+            </svg>
+          </div>
+
+          <!-- Legend -->
+          <div class="diagram-legend mt-4 flex flex-wrap gap-4 justify-center">
+            <div class="legend-item"><span class="legend-dot bg-blue-400"></span>Banda / Motor M1</div>
+            <div class="legend-item"><span class="legend-dot bg-green-400"></span>Sensores Digitales</div>
+            <div class="legend-item"><span class="legend-dot bg-yellow-400"></span>Sensores Analógicos</div>
+            <div class="legend-item"><span class="legend-dot bg-purple-400"></span>Celdas de Peso</div>
+            <div class="legend-item"><span class="legend-dot bg-red-400"></span>Final de Carrera</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== SECTION: ALERTAS ===== -->
+      <section id="section-alertas" class="section-content">
+        <div class="mb-6">
+          <h2 class="text-2xl font-orbitron font-bold text-white">Centro de Alertas</h2>
+          <p class="text-gray-500 text-sm mt-1">Historial y alertas activas del sistema</p>
+        </div>
+        <div class="space-y-3" id="alertsList">
+          <!-- filled by JS -->
+        </div>
+      </section>
+
+      <!-- ===== SECTION: CONFIG ===== -->
+      <section id="section-config" class="section-content">
+        <div class="mb-6">
+          <h2 class="text-2xl font-orbitron font-bold text-white">Configuración del Sistema</h2>
+          <p class="text-gray-500 text-sm mt-1">Parámetros operacionales y conexión</p>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- Connection Config -->
+          <div class="glass-card p-6">
+            <h3 class="section-title mb-4"><i class="fas fa-network-wired text-blue-400 mr-2"></i>Conexión ESP32</h3>
+            <div class="space-y-4">
+              <div class="config-field">
+                <label class="config-label">IP del Microcontrolador</label>
+                <input type="text" value="192.168.1.105" class="config-input" placeholder="192.168.x.x">
+              </div>
+              <div class="config-field">
+                <label class="config-label">Puerto API</label>
+                <input type="text" value="8080" class="config-input" placeholder="8080">
+              </div>
+              <div class="config-field">
+                <label class="config-label">Protocolo</label>
+                <select class="config-input">
+                  <option>HTTP/REST</option>
+                  <option>WebSocket</option>
+                  <option>MQTT</option>
+                </select>
+              </div>
+              <div class="flex items-center justify-between p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl">
+                <span class="text-yellow-400 text-sm font-medium"><i class="fas fa-plug mr-2"></i>Estado: Sin conexión</span>
+                <button class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition">CONECTAR</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- System Parameters -->
+          <div class="glass-card p-6">
+            <h3 class="section-title mb-4"><i class="fas fa-sliders-h text-green-400 mr-2"></i>Parámetros Operacionales</h3>
+            <div class="space-y-4">
+              <div class="config-field">
+                <label class="config-label">Velocidad de Banda (RPM)</label>
+                <input type="range" min="10" max="100" value="60" class="config-range" id="bandSpeed" oninput="document.getElementById('bandSpeedVal').textContent=this.value">
+                <div class="flex justify-between text-xs text-gray-500 mt-1"><span>10 RPM</span><span id="bandSpeedVal" class="text-blue-400 font-bold">60 RPM</span><span>100 RPM</span></div>
+              </div>
+              <div class="config-field">
+                <label class="config-label">Peso Objetivo (kg)</label>
+                <input type="range" min="0.5" max="5" step="0.1" value="1.5" class="config-range" id="targetWeight" oninput="document.getElementById('targetWeightVal').textContent=parseFloat(this.value).toFixed(1)">
+                <div class="flex justify-between text-xs text-gray-500 mt-1"><span>0.5 kg</span><span id="targetWeightVal" class="text-green-400 font-bold">1.5 kg</span><span>5.0 kg</span></div>
+              </div>
+              <div class="config-field">
+                <label class="config-label">Umbral Nivel Tolva (%)</label>
+                <input type="range" min="5" max="30" value="15" class="config-range" id="tolvaThreshold" oninput="document.getElementById('tolvaThresholdVal').textContent=this.value">
+                <div class="flex justify-between text-xs text-gray-500 mt-1"><span>5%</span><span id="tolvaThresholdVal" class="text-yellow-400 font-bold">15%</span><span>30%</span></div>
+              </div>
+              <button class="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-xl transition">
+                <i class="fas fa-save mr-2"></i>GUARDAR CONFIGURACIÓN
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="px-6 py-3 border-t border-white/5 flex items-center justify-between text-xs text-gray-600">
+      <span class="font-mono">BeltControl v2.4.1 · Sistema de Banda Transportadora con Tolva Dosificadora</span>
+      <span class="font-mono">ESP32 · Preparado para integración IoT · © 2025 Industrial Automation Lab</span>
+    </footer>
+  </div>
+
+  <!-- Toast Notifications -->
+  <div id="toastContainer" class="fixed bottom-6 right-6 space-y-3 z-[100]"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>
